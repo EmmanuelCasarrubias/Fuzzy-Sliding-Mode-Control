@@ -13,8 +13,6 @@ def system_dynamics(x, t, u):
 
 # Función para actualizar las reglas y funciones de membresía fuzzy
 def update_fuzzy_controller(error):
-    # Definir las funciones de membresía y las reglas según el error
-    # Este es un ejemplo sencillo. En la práctica, este proceso podría ser más complejo
     error_range = max(10, abs(error) * 2)
     error_fuzzy = ctrl.Antecedent(np.linspace(-error_range, error_range, 500), 'error')
     control = ctrl.Consequent(np.linspace(-10, 10, 500), 'control')
@@ -34,20 +32,21 @@ fuzzy_controller = update_fuzzy_controller(0)
 
 # Controlador de modos deslizantes fuzzy adaptativo
 def adaptive_fuzzy_sliding_control(x, r, fuzzy_controller):
-    e = x[0] - r[0]  # Error entre el estado y la referencia
-    de = x[1] - r[1] # Derivada del error
-    s = e + de       # Superficie de deslizamiento
+    e = x[0] - r[0]
+    de = x[1] - r[1]
+    s = e + de
 
-    # Actualizar y evaluar el controlador fuzzy
     fuzzy_controller.input['error'] = e
     fuzzy_controller.compute()
     control_action = fuzzy_controller.output['control']
 
-    u = -control_action * np.sign(s)
+    # Ajustar la acción de control para mejorar la convergencia
+    u = -control_action - k * np.sign(s)  # k es un parámetro de ganancia
     return u
 
-# Vector de tiempo
+# Vector de tiempo y parámetros
 t = np.linspace(0, 10, 1000)
+k = 2.0  # Ganancia del controlador
 
 # Condiciones iniciales y referencia
 x0 = np.array([0, 0])
@@ -59,8 +58,7 @@ u = np.zeros_like(t)
 
 for i in range(1, len(t)):
     dt = t[i] - t[i - 1]
-    # Actualizar el controlador fuzzy según sea necesario
-    if i % 50 == 0:  # Actualización periódica como ejemplo
+    if i % 50 == 0:
         fuzzy_controller = update_fuzzy_controller(x[i - 1, 0] - r[0])
 
     u[i] = adaptive_fuzzy_sliding_control(x[i - 1], r, fuzzy_controller)
@@ -68,8 +66,6 @@ for i in range(1, len(t)):
 
 # Gráficos
 plt.figure(figsize=(12, 8))
-
-# Respuesta del sistema
 plt.subplot(2, 1, 1)
 plt.plot(t, x[:,0], 'b-', label='System Response')
 plt.plot(t, [r[0]] * len(t), 'r--', label='Reference')
@@ -77,7 +73,6 @@ plt.ylabel('Position')
 plt.title('Adaptive Fuzzy Sliding Mode Control Response')
 plt.legend()
 
-# Señal de control
 plt.subplot(2, 1, 2)
 plt.plot(t, u, 'k-', label='Control Signal')
 plt.xlabel('Time')
